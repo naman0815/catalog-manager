@@ -59,6 +59,7 @@ export function TutorialOverlay() {
   // Show "done" flash on Retake Tutorial button
   const [highlightRetake, setHighlightRetake] = useState(false);
   const [retakeRect, setRetakeRect] = useState<OverlayRect | null>(null);
+  const [escapeWarning, setEscapeWarning] = useState(false);
 
   const rectRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2, w: 0, h: 0 });
   const targetRectRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2, w: 0, h: 0 });
@@ -165,6 +166,34 @@ export function TutorialOverlay() {
     window.addEventListener("restart-tutorial", handleRestart);
     return () => window.removeEventListener("restart-tutorial", handleRestart);
   }, []);
+
+  // Cancel tutorial on double escape
+  useEffect(() => {
+    if (!active) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        setEscapeWarning((prev) => {
+          if (prev) {
+            setActive(false);
+            return false;
+          }
+          return true;
+        });
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [active]);
+
+  // Clear escape warning after a few seconds
+  useEffect(() => {
+    if (escapeWarning) {
+      const t = setTimeout(() => setEscapeWarning(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [escapeWarning]);
 
   // Advance step — snap when the element is likely in a new location
   const advanceStep = (nextIdx: number) => {
@@ -348,6 +377,26 @@ export function TutorialOverlay() {
               <button className="button button--primary" onClick={handleStart}>Yes, start tour</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Escape warning message */}
+      {escapeWarning && active && (
+        <div style={{
+          position: "fixed",
+          top: "24px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(255, 103, 125, 0.95)",
+          color: "var(--text-main)",
+          padding: "0.5rem 1rem",
+          borderRadius: "8px",
+          zIndex: 10001,
+          fontWeight: 600,
+          boxShadow: "0 10px 20px rgba(0,0,0,0.3)",
+          pointerEvents: "none"
+        }}>
+          Press <kbd style={{ background: "rgba(0,0,0,0.2)", padding: "2px 6px", borderRadius: "4px" }}>Esc</kbd> again to exit tutorial
         </div>
       )}
 

@@ -397,7 +397,7 @@ textarea {
   gap: 0.55rem;
 }
 
-.field > span {
+.field>span {
   font-size: 0.88rem;
   color: var(--text-muted);
   text-transform: none;
@@ -488,6 +488,7 @@ textarea {
 .panel--collections {
   min-height: 500px;
 }
+
 .folder-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -782,7 +783,7 @@ textarea {
   cursor: pointer;
 }
 
-.catalog-list__item > div {
+.catalog-list__item>div {
   min-width: 0;
 }
 
@@ -863,6 +864,7 @@ textarea {
 }
 
 @media (max-width: 720px) {
+
   .content,
   .sidebar,
   .modal-shell {
@@ -1441,6 +1443,28 @@ textarea {
   color: var(--danger);
 }
 
+/* ─── Sync-needed highlight on manifest panel ────────────────── */
+.panel--sync-needed {
+  border-color: var(--danger);
+  animation: syncPulse 2s ease-in-out infinite;
+}
+
+@keyframes syncPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 103, 125, 0); border-color: var(--danger); }
+  50%       { box-shadow: 0 0 28px 4px rgba(255, 103, 125, 0.35); border-color: rgba(255, 60, 90, 0.9); }
+}
+
+/* Red placeholder when imported without sync */
+.panel--sync-needed #tut-manifest-input::placeholder {
+  color: rgba(255, 103, 125, 0.75);
+  font-style: italic;
+}
+
+.panel--sync-needed #tut-manifest-input {
+  border-color: rgba(255, 103, 125, 0.5);
+}
+
+
 /* ─── Collection card (with action buttons at bottom) ────────── */
 .collection-card {
   position: relative;
@@ -1489,6 +1513,7 @@ textarea {
   border: 1px solid rgba(136, 156, 197, 0.16);
   border-radius: var(--radius-sm);
 }
+
 .emoji-btn {
   font-size: 1.4rem;
   border-radius: 8px;
@@ -1496,10 +1521,12 @@ textarea {
   cursor: pointer;
   transition: transform 0.15s ease, background 0.15s ease;
 }
+
 .emoji-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   transform: scale(1.15);
 }
+
 .emoji-btn.is-active {
   background: rgba(89, 118, 255, 0.3);
   transform: scale(1.15);
@@ -1521,7 +1548,7 @@ textarea {
   border: 1px solid rgba(89, 118, 255, 0.3);
   padding: 1.5rem;
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(89, 118, 255, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(89, 118, 255, 0.2);
   width: 320px;
   text-align: center;
 }
@@ -1531,6 +1558,7 @@ textarea {
   font-size: 1.2rem;
   color: var(--text-main);
 }
+
 .tut-modal p {
   color: var(--text-muted);
   font-size: 0.95rem;
@@ -1541,6 +1569,7 @@ textarea {
   display: flex;
   gap: 1rem;
 }
+
 .tut-modal-actions .button {
   flex: 1;
 }
@@ -1567,6 +1596,7 @@ textarea {
     box-shadow: 0 0 15px rgba(89, 118, 255, 0.6), inset 0 0 5px rgba(89, 118, 255, 0.2);
     border-color: rgba(89, 118, 255, 0.75);
   }
+
   100% {
     box-shadow: 0 0 35px rgba(89, 118, 255, 1), inset 0 0 15px rgba(89, 118, 255, 0.4);
     border-color: rgba(114, 144, 255, 1);
@@ -1627,6 +1657,7 @@ textarea {
   box-shadow: 0 10px 20px rgba(89, 118, 255, 0.4);
   pointer-events: auto;
 }
+
 .tut-tooltip::after {
   content: "";
   position: absolute;
@@ -1704,6 +1735,7 @@ textarea {
     transform: scale(0.8);
     opacity: 0.35;
   }
+
   100% {
     transform: scale(1.15);
     opacity: 1;
@@ -1711,9 +1743,12 @@ textarea {
 }
 
 @keyframes tutChevronBounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(4px);
   }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
 import {
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { CollectionEditorModal } from "./components/CollectionEditorModal";
 import { TutorialOverlay } from "./components/Tutorial";
-import { Analytics } from "@vercel/analytics/react";
 
 import type { ParsedManifest, TopLevelCollection } from "./types";
 import { createEmptyCollection, fetchManifest, normalizeCollection } from "./utils/manifestParser";
@@ -33,13 +32,41 @@ function App() {
   // ── Collections state (array) ──
   const [collections, setCollections] = useState<TopLevelCollection[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
+  // Tracks when user imported JSON without having a manifest URL → triggers red highlight
+  const [importedWithoutSync, setImportedWithoutSync] = useState(false);
 
   // ── Modal state: null = closed, TopLevelCollection = editing ──
   const [editingCollection, setEditingCollection] = useState<TopLevelCollection | null>(null);
 
+  // ── Persist manifest URL to localStorage ──
+  useEffect(() => {
+    if (manifestUrl) localStorage.setItem("cm_manifestUrl", manifestUrl);
+  }, [manifestUrl]);
 
+  // ── Persist collections to localStorage ──
+  useEffect(() => {
+    localStorage.setItem("cm_collections", JSON.stringify(collections));
+  }, [collections]);
+
+  // ── Restore from localStorage on mount and auto-sync ──
+  useEffect(() => {
+    const savedCols = localStorage.getItem("cm_collections");
+    if (savedCols) {
+      try { setCollections(JSON.parse(savedCols)); } catch { /* ignore */ }
+    }
+    const savedUrl = localStorage.getItem("cm_manifestUrl");
+    if (savedUrl) {
+      setManifestUrl(savedUrl);
+      setManifestState({ loading: true, error: null, data: null });
+      fetchManifest(savedUrl)
+        .then((data) => setManifestState({ loading: false, error: null, data }))
+        .catch(() => setManifestState({ loading: false, error: null, data: null }));
+    }
+  }, []);
 
   const manifestSynced = !!manifestState.data;
+  // Highlight Step 1 when collections exist but manifest isn't synced (e.g. after JSON import)
+  const shouldHighlightSync = collections.length > 0 && !manifestSynced;
 
   const totalFolders = useMemo(
     () => collections.reduce((sum, c) => sum + c.folders.length, 0),
@@ -57,6 +84,7 @@ function App() {
   // ── Manifest ──
   const handleSyncManifest = async () => {
     if (!manifestUrl.trim()) return;
+    setImportedWithoutSync(false);
     setManifestState({ loading: true, error: null, data: null });
     try {
       const data = await fetchManifest(manifestUrl);
@@ -103,6 +131,8 @@ function App() {
       const normalized = raw.map((item) => normalizeCollection(item));
       setCollections(normalized);
       setImportError(null);
+      // Flag to highlight sync panel only when this was triggered by an actual import action
+      if (!manifestSynced) setImportedWithoutSync(true);
     } catch (error) {
       setImportError(error instanceof Error ? error.message : "Failed to import JSON.");
     }
@@ -174,9 +204,9 @@ function App() {
         </div>
 
         <div className="sidebar-footer">
-          <button 
+          <button
             id="tut-retake-tutorial"
-            className="button button--ghost button--full" 
+            className="button button--ghost button--full"
             style={{ fontSize: "0.75rem", padding: "0.5rem" }}
             onClick={() => window.dispatchEvent(new CustomEvent("restart-tutorial"))}
           >
@@ -190,7 +220,7 @@ function App() {
         {importError ? <p className="error-text" style={{ marginBottom: "0.75rem" }}>{importError}</p> : null}
 
         {/* ── STEP 1: Manifest sync ── */}
-        <section className="panel">
+        <section className={`panel${importedWithoutSync ? " panel--sync-needed" : ""}`}>
           <div className="panel__header">
             <div>
               <p className="panel__eyebrow">
@@ -228,7 +258,9 @@ function App() {
               id="tut-manifest-input"
               type="url"
               value={manifestUrl}
-              onChange={(event) => setManifestUrl(event.target.value)}
+              placeholder={importedWithoutSync ? "Paste your manifest URL" : ""}
+              onChange={(event) => { setImportedWithoutSync(false); setManifestUrl(event.target.value); }}
+              onFocus={() => setImportedWithoutSync(false)}
               onKeyDown={(e) => e.key === "Enter" && handleSyncManifest()}
             />
             <button
@@ -371,14 +403,12 @@ function App() {
           manifest={manifestState.data}
           onClose={() => setEditingCollection(null)}
           onSave={handleSaveCollection}
+          preventOutsideClick={collections.length === 0}
         />
       )}
-      
+
       {/* ── Tutorial ── */}
       <TutorialOverlay />
-      
-      {/* ── Vercel Analytics ── */}
-      <Analytics />
     </div>
   );
 }

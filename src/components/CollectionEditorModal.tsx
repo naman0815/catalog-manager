@@ -67,6 +67,7 @@ interface CollectionEditorModalProps {
   manifest: ParsedManifest | null;
   onClose: () => void;
   onSave: (collection: TopLevelCollection) => void;
+  preventOutsideClick?: boolean;
 }
 
 // ─── FolderMiniEditor ────────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
     { id: "catalogs" as const, label: `Catalogs ${draft.catalogSources.length > 0 ? `(${draft.catalogSources.length})` : ""}` },
     { id: "appearance" as const, label: "Appearance" },
   ];
-  
+
   const currentTabIndex = miniTabs.findIndex((t) => t.id === tab);
 
   return (
@@ -424,14 +425,14 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
         </div>
         <div className="modal-card__footer-actions">
           {currentTabIndex < miniTabs.length - 1 ? (
-             <button
-               id={currentTabIndex === 0 ? "tut-folder-continue-1" : currentTabIndex === 1 ? "tut-folder-continue-2" : undefined}
-               className="button button--primary"
-               type="button"
-               onClick={() => setTab(miniTabs[currentTabIndex + 1].id)}
-             >
-               Continue
-             </button>
+            <button
+              id={currentTabIndex === 0 ? "tut-folder-continue-1" : currentTabIndex === 1 ? "tut-folder-continue-2" : undefined}
+              className="button button--primary"
+              type="button"
+              onClick={() => setTab(miniTabs[currentTabIndex + 1].id)}
+            >
+              Continue
+            </button>
           ) : (
             <button id="tut-save-folder" className="button button--primary" type="button" onClick={() => onSave(draft)}>
               Save folder
@@ -526,6 +527,7 @@ export function CollectionEditorModal({
   manifest,
   onClose,
   onSave,
+  preventOutsideClick = false,
 }: CollectionEditorModalProps) {
   const [draft, setDraft] = useState<TopLevelCollection>(collection);
   const [step, setStep] = useState<CollectionStep>("basics");
@@ -564,7 +566,7 @@ export function CollectionEditorModal({
 
   return (
     <div className="modal-shell" role="dialog" aria-modal="true" aria-labelledby="collection-editor-title">
-      <div className="modal-backdrop" onClick={onClose} />
+      <div className="modal-backdrop" />
       <section className="modal-card">
         <header className="modal-card__header">
           <div>
