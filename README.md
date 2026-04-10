@@ -10,8 +10,7 @@ A tool to organize, filter, and create custom collections for [Nuvio](https://gi
 ⚠️ I have not tested this on mobile so PC is highly recommended.
 
 # Screenshot
-<img width="1470" height="956" alt="Screenshot 2026-04-10 at 10 49 26 PM" src="https://github.com/user-attachments/assets/c470c437-6d84-48a8-95e4-f2cba051678c" />
-
+<img width="1397" height="862" alt="Screenshot 2026-04-11 at 12 03 46 AM" src="https://github.com/user-attachments/assets/cc307184-c675-4ab3-bf5f-126fa7f8df3e" />
 
 # Developer Setup & Self-Hosting
 
