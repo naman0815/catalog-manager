@@ -8,11 +8,13 @@ import {
   Download,
   Import,
   Layers3,
+  Loader2,
   Pencil,
   Plus,
   RefreshCcw,
   Sparkles,
   Trash2,
+  CloudUpload,
 } from "lucide-react";
 import { CollectionEditorModal } from "./components/CollectionEditorModal";
 
@@ -36,6 +38,11 @@ function App() {
 
   // ── Modal state: null = closed, TopLevelCollection = editing ──
   const [editingCollection, setEditingCollection] = useState<TopLevelCollection | null>(null);
+
+  // ── Publish state ──
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishUrl, setPublishUrl] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   const manifestSynced = !!manifestState.data;
 
@@ -129,6 +136,31 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  // ── Publish ──
+  const handlePublish = async () => {
+    if (!collections.length) return;
+    setIsPublishing(true);
+    setPublishUrl(null);
+    setPublishError(null);
+    try {
+      const res = await fetch("/api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(collections),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to publish");
+      }
+      setPublishUrl(data.url);
+    } catch (err: any) {
+      setPublishError(err.message || "An error occurred");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
 
   return (
     <div className="app-shell">
@@ -173,9 +205,47 @@ function App() {
             Export JSON
           </button>
 
+          <button
+            className="button button--primary button--full"
+            style={{ marginTop: "0.4rem" }}
+            type="button"
+            onClick={handlePublish}
+            disabled={!collections.length || isPublishing}
+          >
+            {isPublishing ? <Loader2 size={16} className="animate-spin" /> : <CloudUpload size={16} />}
+            {isPublishing ? "Publishing..." : "Publish to Vercel"}
+          </button>
+          
+          {publishError && (
+            <p className="error-text" style={{ marginTop: "0.5rem", fontSize: "0.75rem" }}>
+              {publishError}
+            </p>
+          )}
+
+          {publishUrl && (
+            <div style={{ marginTop: "1rem" }}>
+              <div className="sidebar-nav__label" style={{ marginBottom: "0.5rem" }}>Hosted URL <span style={{color: "var(--accent)"}}>Live</span></div>
+              <input 
+                type="url" 
+                readOnly 
+                value={publishUrl}
+                style={{ 
+                  width: "100%", 
+                  fontSize: "0.75rem", 
+                  padding: "0.5rem", 
+                  borderRadius: "6px", 
+                  border: "1px solid rgba(89, 118, 255, 0.4)", 
+                  background: "rgba(89, 118, 255, 0.08)",
+                  color: "var(--text-main)" 
+                }}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+            </div>
+          )}
+
           {collections.length > 0 && (
             <div style={{ marginTop: "1rem" }}>
-              <div className="sidebar-nav__label" style={{ marginBottom: "0.5rem" }}>Export URL</div>
+              <div className="sidebar-nav__label" style={{ marginBottom: "0.5rem" }}>Export Data URL</div>
               <input 
                 type="url" 
                 readOnly 
