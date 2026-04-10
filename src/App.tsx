@@ -7,12 +7,10 @@ import {
   ChevronRight,
   Download,
   Import,
-  Layers3,
   Loader2,
   Pencil,
   Plus,
   RefreshCcw,
-  Sparkles,
   Trash2,
   CloudUpload,
 } from "lucide-react";
