@@ -51,6 +51,13 @@ const shapeWidths: Record<Folder["tileShape"], number> = {
   LANDSCAPE: 160,
 };
 
+function formatCatalogType(type: string) {
+  const normalized = type.trim().toLowerCase();
+  if (normalized.includes("move")) return "move";
+  if (normalized.includes("series")) return "series";
+  return normalized.split(/[\s._/-]+/).filter(Boolean)[0] || normalized;
+}
+
 // ─── types ───────────────────────────────────────────────────────────────────
 
 type CollectionStep = "basics" | "folders" | "appearance";
@@ -153,6 +160,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
             <label className="field">
               <span>Folder name</span>
               <input
+                id="tut-folder-title"
                 type="text"
                 value={draft.title}
                 onChange={(e) => update("title", e.target.value)}
@@ -162,7 +170,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
             </label>
 
             <div className="toggle-list">
-              <button className="toggle-row" type="button" onClick={() => update("hideTitle", !draft.hideTitle)}>
+              <button id="tut-folder-hide-title" className="toggle-row" type="button" onClick={() => update("hideTitle", !draft.hideTitle)}>
                 <div>
                   <strong>Hide title on the card</strong>
                   <span>Useful when the cover already contains branding.</span>
@@ -198,40 +206,42 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
             {/* editor */}
             <div className="poster-editor-pane">
               <div className="stack">
-                <div className="field">
-                  <span>Display shape</span>
-                  <div className="segmented">
-                    {(["POSTER", "SQUARE", "LANDSCAPE"] as const).map((shape) => (
-                      <button
-                        key={shape}
-                        className={`segmented__option ${draft.tileShape === shape ? "is-active" : ""}`}
-                        type="button"
-                        onClick={() => update("tileShape", shape)}
-                      >
-                        {shape === "POSTER" && <Film size={14} />}
-                        {shape === "SQUARE" && <Grid2x2 size={14} />}
-                        {shape === "LANDSCAPE" && <RectangleHorizontal size={14} />}
-                        {shape.toLowerCase()}
-                      </button>
-                    ))}
+                <div id="tut-display-shape-box" className="poster-editor-group">
+                  <div id="tut-display-shape" className="field">
+                    <span>Display shape</span>
+                    <div className="segmented">
+                      {(["POSTER", "SQUARE", "LANDSCAPE"] as const).map((shape) => (
+                        <button
+                          key={shape}
+                          className={`segmented__option ${draft.tileShape === shape ? "is-active" : ""}`}
+                          type="button"
+                          onClick={() => update("tileShape", shape)}
+                        >
+                          {shape === "POSTER" && <Film size={14} />}
+                          {shape === "SQUARE" && <Grid2x2 size={14} />}
+                          {shape === "LANDSCAPE" && <RectangleHorizontal size={14} />}
+                          {shape.toLowerCase()}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="field">
-                  <span>Cover style</span>
-                  <div className="segmented">
-                    {(["none", "emoji", "image"] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        className={`segmented__option ${draft._coverMode === mode ? "is-active" : ""}`}
-                        type="button"
-                        onClick={() => update("_coverMode", mode)}
-                      >
-                        {mode === "image" && <Image size={13} />}
-                        {mode === "emoji" && <Smile size={13} />}
-                        {mode}
-                      </button>
-                    ))}
+                  <div className="field">
+                    <span>Cover style</span>
+                    <div className="segmented">
+                      {(["none", "emoji", "image"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          className={`segmented__option ${draft._coverMode === mode ? "is-active" : ""}`}
+                          type="button"
+                          onClick={() => update("_coverMode", mode)}
+                        >
+                          {mode === "image" && <Image size={13} />}
+                          {mode === "emoji" && <Smile size={13} />}
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -318,9 +328,10 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
                   <h3>From manifest</h3>
                 </div>
               </div>
-              <label className="search-field">
+              <label id="tut-search-field" className="search-field">
                 <Search size={13} />
                 <input
+                  id="tut-search-catalog"
                   type="search"
                   value={catalogFilter}
                   onChange={(e) => setCatalogFilter(e.target.value)}
@@ -334,6 +345,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
                     const selected = activeCatalogs.has(key);
                     return (
                       <button
+                        id={visibleCatalogs.indexOf(cat) === 0 ? "tut-add-catalog" : undefined}
                         key={`${cat.type}-${cat.id}`}
                         className={`catalog-list__item ${selected ? "is-selected" : ""}`}
                         type="button"
@@ -342,7 +354,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
                       >
                         <div>
                           <strong>{cat.name}</strong>
-                          <span>{cat.type} • {cat.id}</span>
+                          <span>{formatCatalogType(cat.type)}</span>
                         </div>
                         {selected ? <Check size={14} /> : <span>Add</span>}
                       </button>
@@ -373,7 +385,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
                     >
                       <div>
                         <strong>{src.catalogId}</strong>
-                        <span>{src.type} • {src.addonId}</span>
+                        <span>{formatCatalogType(src.type)}</span>
                       </div>
                       <button
                         className="icon-button icon-button--danger"
@@ -413,6 +425,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
         <div className="modal-card__footer-actions">
           {currentTabIndex < miniTabs.length - 1 ? (
              <button
+               id={currentTabIndex === 0 ? "tut-folder-continue-1" : currentTabIndex === 1 ? "tut-folder-continue-2" : undefined}
                className="button button--primary"
                type="button"
                onClick={() => setTab(miniTabs[currentTabIndex + 1].id)}
@@ -420,7 +433,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
                Continue
              </button>
           ) : (
-            <button className="button button--primary" type="button" onClick={() => onSave(draft)}>
+            <button id="tut-save-folder" className="button button--primary" type="button" onClick={() => onSave(draft)}>
               Save folder
             </button>
           )}
@@ -567,6 +580,7 @@ export function CollectionEditorModal({
         <div className="stepper">
           {TOP_STEPS.map((s, i) => (
             <button
+              id={s.id === "appearance" ? "tut-appearance-tab" : undefined}
               key={s.id}
               className={`stepper__item ${step === s.id ? "is-active" : ""}`}
               type="button"
@@ -604,9 +618,9 @@ export function CollectionEditorModal({
                 </div>
               )}
 
-              <button className="add-folder-btn" type="button" onClick={addFolder}>
+              <button id="tut-add-folder" className="add-folder-btn" type="button" onClick={addFolder}>
                 <Plus size={16} />
-                Add folder
+                Add a folder
               </button>
             </div>
           )}
@@ -617,6 +631,7 @@ export function CollectionEditorModal({
               <label className="field">
                 <span>Collection title</span>
                 <input
+                  id="tut-collection-title"
                   type="text"
                   value={draft.title}
                   onChange={(e) => updateCollection("title", e.target.value)}
@@ -632,6 +647,9 @@ export function CollectionEditorModal({
                   placeholder="https://..."
                 />
               </label>
+              <p style={{ fontSize: "0.85rem", color: "var(--danger)", marginTop: "-0.5rem" }}>
+                The Backdrop image URL acts as a fallback image and is not required as it's not really used.
+              </p>
             </div>
           )}
 
@@ -702,6 +720,7 @@ export function CollectionEditorModal({
             <div className="modal-card__footer-actions">
               {stepIndex < TOP_STEPS.length - 1 ? (
                 <button
+                  id={step === "basics" ? "tut-collection-continue-1" : step === "folders" ? "tut-collection-continue-2" : undefined}
                   className="button button--primary"
                   type="button"
                   onClick={() => setStep(TOP_STEPS[stepIndex + 1].id)}
@@ -710,7 +729,7 @@ export function CollectionEditorModal({
                   Continue
                 </button>
               ) : (
-                <button className="button button--primary" type="button" onClick={() => onSave(draft)}>
+                <button id="tut-save-collection" className="button button--primary" type="button" onClick={() => onSave(draft)}>
                   Save collection
                 </button>
               )}

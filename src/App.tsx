@@ -15,6 +15,7 @@ import {
   CloudUpload,
 } from "lucide-react";
 import { CollectionEditorModal } from "./components/CollectionEditorModal";
+import { TutorialOverlay } from "./components/Tutorial";
 
 import type { ParsedManifest, TopLevelCollection } from "./types";
 import { createEmptyCollection, fetchManifest, normalizeCollection } from "./utils/manifestParser";
@@ -136,7 +137,6 @@ function App() {
 
   // ── Publish ──
   const handlePublish = async () => {
-    if (!collections.length) return;
     setIsPublishing(true);
     setPublishUrl(null);
     setPublishError(null);
@@ -147,7 +147,16 @@ function App() {
         body: JSON.stringify(collections),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        // If it fails to parse (e.g. Vite returning index.html locally)
+        throw new Error("API returned an invalid response. Note: Publishing only works on the live Vercel deployment, not on localhost.");
+      }
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to publish");
       }
@@ -186,47 +195,47 @@ function App() {
               : "No collections yet"}
           </strong>
           <span>
-            {totalFolders} folder{totalFolders !== 1 ? "s" : ""} • {totalSources} linked catalog
-            {totalSources !== 1 ? "s" : ""}
+            {totalFolders} folder{totalFolders !== 1 ? "s" : ""} • {totalSources} source{totalSources !== 1 ? "s" : ""}
           </span>
-          <button
-            className="button button--primary button--full"
-            type="button"
-            onClick={handleExport}
-            disabled={!collections.length}
-          >
-            <Download size={16} />
-            Download JSON
-          </button>
+          <div className="stack stack--sm" style={{ marginTop: "0.5rem" }}>
+            <button
+              className="button button--ghost button--full"
+              type="button"
+              onClick={handleExport}
+              disabled={!collections.length}
+            >
+              <Download size={14} />
+              Download JSON
+            </button>
 
-          <button
-            className="button button--primary button--full"
-            style={{ marginTop: "0.4rem" }}
-            type="button"
-            onClick={handlePublish}
-            disabled={!collections.length || isPublishing}
-          >
-            {isPublishing ? <Loader2 size={16} className="animate-spin" /> : <CloudUpload size={16} />}
-            {isPublishing ? "Publishing..." : "Publish to Vercel"}
-          </button>
+            <button
+              className="button button--primary button--full"
+              type="button"
+              onClick={handlePublish}
+              disabled={!collections.length || isPublishing}
+            >
+              {isPublishing ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}
+              {isPublishing ? "Publishing..." : "Publish to Vercel"}
+            </button>
+          </div>
           
           {publishError && (
-            <p className="error-text" style={{ marginTop: "0.5rem", fontSize: "0.75rem" }}>
+            <p className="error-text" style={{ marginTop: "0.5rem", fontSize: "0.7rem" }}>
               {publishError}
             </p>
           )}
 
           {publishUrl && (
-            <div style={{ marginTop: "1rem" }}>
-              <div className="sidebar-nav__label" style={{ marginBottom: "0.5rem" }}>Hosted URL <span style={{color: "var(--accent)"}}>Live</span></div>
+            <div style={{ marginTop: "0.75rem" }}>
+              <div className="sidebar-nav__label" style={{ marginBottom: "0.3rem" }}>Hosted URL <span style={{color: "var(--accent)"}}>Live</span></div>
               <input 
                 type="url" 
                 readOnly 
                 value={publishUrl}
                 style={{ 
                   width: "100%", 
-                  fontSize: "0.75rem", 
-                  padding: "0.5rem", 
+                  fontSize: "0.7rem", 
+                  padding: "0.45rem", 
                   borderRadius: "6px", 
                   border: "1px solid rgba(89, 118, 255, 0.4)", 
                   background: "rgba(89, 118, 255, 0.08)",
@@ -238,16 +247,16 @@ function App() {
           )}
 
           {collections.length > 0 && (
-            <div style={{ marginTop: "1rem" }}>
-              <div className="sidebar-nav__label" style={{ marginBottom: "0.5rem" }}>Export Data URL</div>
+            <div style={{ marginTop: "0.75rem" }}>
+              <div className="sidebar-nav__label" style={{ marginBottom: "0.3rem" }}>Export Data URL</div>
               <input 
                 type="url" 
                 readOnly 
                 value={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(collections))}`}
                 style={{ 
                   width: "100%", 
-                  fontSize: "0.75rem", 
-                  padding: "0.5rem", 
+                  fontSize: "0.7rem", 
+                  padding: "0.45rem", 
                   borderRadius: "6px", 
                   border: "1px solid var(--border)", 
                   background: "var(--background)",
@@ -260,30 +269,20 @@ function App() {
         </div>
 
         <div className="sidebar-footer">
-          {/* Build info removed */}
+          <button 
+            id="tut-retake-tutorial"
+            className="button button--ghost button--full" 
+            style={{ fontSize: "0.75rem", padding: "0.5rem" }}
+            onClick={() => window.dispatchEvent(new CustomEvent("restart-tutorial"))}
+          >
+            Retake Tutorial
+          </button>
         </div>
       </aside>
 
       {/* ━━━━━ Main content ━━━━━ */}
       <main className="content">
-        {/* Hero */}
-        <section className="hero-panel hero-panel--compact">
-          <div className="hero-panel__copy">
-            {/* "Build your catalog" text removed */}
-          </div>
-          <div className="hero-panel__actions">
-            <label className="button button--ghost file-button">
-              <Import size={16} />
-              Import JSON
-              <input type="file" accept=".json,application/json" onChange={handleImportFile} />
-            </label>
-          </div>
-        </section>
-
-        {importError ? <p className="error-text" style={{ marginTop: "0.75rem" }}>{importError}</p> : null}
-
-        {/* CORS notice */}
-        {/* notice-panel removed */}
+        {importError ? <p className="error-text" style={{ marginBottom: "0.75rem" }}>{importError}</p> : null}
 
         {/* ── STEP 1: Manifest sync ── */}
         <section className="panel">
@@ -297,7 +296,7 @@ function App() {
                 {manifestSynced ? (
                   <>
                     <CheckCircle2
-                      size={18}
+                      size={16}
                       style={{ color: "var(--accent)", verticalAlign: "middle", marginRight: 6 }}
                     />
                     Manifest synced — {manifestState.data!.catalogs.length} catalogs loaded
@@ -307,19 +306,28 @@ function App() {
                 )}
               </h2>
             </div>
-            {manifestSynced && (
-              <div className="panel__badge">{manifestState.data!.catalogs.length} catalogs</div>
-            )}
+            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+              <label className="button button--ghost file-button" style={{ padding: "0.4rem 0.8rem" }}>
+                <Import size={14} />
+                Import JSON
+                <input type="file" accept=".json,application/json" onChange={handleImportFile} />
+              </label>
+              {manifestSynced && (
+                <div className="panel__badge">{manifestState.data!.catalogs.length} catalogs</div>
+              )}
+            </div>
           </div>
 
           <div className="manifest-bar">
             <input
+              id="tut-manifest-input"
               type="url"
               value={manifestUrl}
               onChange={(event) => setManifestUrl(event.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSyncManifest()}
             />
             <button
+              id="tut-sync-btn"
               className="button button--primary"
               type="button"
               onClick={handleSyncManifest}
@@ -338,7 +346,7 @@ function App() {
         </section>
 
         {/* ── STEP 2: Collections ── */}
-        <section className={`panel ${!manifestSynced ? "panel--locked" : ""}`}>
+        <section className={`panel panel--collections ${!manifestSynced ? "panel--locked" : ""}`}>
           <div className="panel__header">
             <div>
               <p className="panel__eyebrow">
@@ -413,18 +421,14 @@ function App() {
 
                 {/* Add collection card */}
                 <button
+                  id="tut-add-collection"
                   className="folder-card folder-card--add"
+                  style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%" }}
                   type="button"
                   onClick={handleAddCollection}
                 >
-                  <div className="folder-card__media folder-card__media--add">
-                    <Plus size={26} />
-                  </div>
-                  <div className="folder-card__body">
-                    <div className="folder-card__eyebrow">Create</div>
-                    <h3>Add Collection</h3>
-                    <p>Set up folders, posters, and catalog sources.</p>
-                  </div>
+                  <Plus size={32} style={{ marginBottom: "0.5rem", opacity: 0.8 }} />
+                  <span style={{ fontSize: "1.05rem", fontWeight: 600 }}>Add a collection</span>
                 </button>
               </div>
 
@@ -467,6 +471,9 @@ function App() {
           onSave={handleSaveCollection}
         />
       )}
+      
+      {/* ── Tutorial ── */}
+      <TutorialOverlay />
     </div>
   );
 }
