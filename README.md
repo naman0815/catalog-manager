@@ -6,7 +6,7 @@ A tool to organize, filter, and create custom collections for [Nuvio](https://gi
 3. Download the JSON file.
 4. In the Nuvio TV app, go to Addons → Manage from phone.
 5. Scan the QR code, go to Collections, click Import and choose the JSON file.
-6. Save changes and sync to your TV. Done!
+6. Save changes and sync to your TV. Done! <br>
 ⚠️ I have not tested this on mobile so PC is highly recommended.
 
 # Screenshot
