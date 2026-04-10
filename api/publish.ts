@@ -15,7 +15,13 @@ export default async function handler(request, response) {
       contentType: 'application/json',
     });
 
-    return response.status(200).json(blob);
+    const host = request.headers.host;
+    const protocol = host?.includes('localhost') ? 'http' : 'https';
+    
+    // Return a "Pretty" URL that uses our own domain's proxy
+    return response.status(200).json({ 
+      url: `${protocol}://${host}/api/config?name=${filename}`
+    });
   } catch (error) {
     return response.status(500).json({ error: error.message });
   }
