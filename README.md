@@ -9,7 +9,7 @@ A tool to organize, filter, and create custom collections for [Nuvio](https://gi
 6. Save changes and sync to your TV. Done!
 ⚠️ I have not tested this on mobile so PC is highly recommended.
 
-#Screenshot
+# Screenshot
 <img width="1470" height="956" alt="Screenshot 2026-04-10 at 10 49 26 PM" src="https://github.com/user-attachments/assets/c470c437-6d84-48a8-95e4-f2cba051678c" />
 
 
