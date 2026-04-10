@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { CollectionEditorModal } from "./components/CollectionEditorModal";
 import { TutorialOverlay } from "./components/Tutorial";
+import { Analytics } from "@vercel/analytics/react";
 
 import type { ParsedManifest, TopLevelCollection } from "./types";
 import { createEmptyCollection, fetchManifest, normalizeCollection } from "./utils/manifestParser";
@@ -375,6 +376,9 @@ function App() {
       
       {/* ── Tutorial ── */}
       <TutorialOverlay />
+      
+      {/* ── Vercel Analytics ── */}
+      <Analytics />
     </div>
   );
 }
