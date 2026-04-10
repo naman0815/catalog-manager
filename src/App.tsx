@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Download,
   Import,
-  Loader2,
   Pencil,
   Plus,
   RefreshCcw,
