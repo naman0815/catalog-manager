@@ -177,11 +177,7 @@ function App() {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="sidebar-nav__label">Workspace</div>
-          <button className="sidebar-nav__item is-active" type="button">
-            <Layers3 size={16} />
-            Catalog builder
-          </button>
+          {/* Workspace navigation removed — single page app */}
         </nav>
 
         <div className="sidebar-panel">
@@ -202,7 +198,7 @@ function App() {
             disabled={!collections.length}
           >
             <Download size={16} />
-            Export JSON
+            Download JSON
           </button>
 
           <button
@@ -266,22 +262,16 @@ function App() {
         </div>
 
         <div className="sidebar-footer">
-          <span>Browser-only build</span>
-          <span>Manifest sync depends on CORS from the source host.</span>
+          {/* Build info removed */}
         </div>
       </aside>
 
       {/* ━━━━━ Main content ━━━━━ */}
       <main className="content">
         {/* Hero */}
-        <section className="hero-panel">
+        <section className="hero-panel hero-panel--compact">
           <div className="hero-panel__copy">
-            <p className="panel__eyebrow">Nuvio catalog workspace</p>
-            <h2>Build your catalog, step by step.</h2>
-            <p>
-              Sync your AIOStreams manifest, then create as many collections as you need — each with
-              its own folders and catalog sources.
-            </p>
+            {/* "Build your catalog" text removed */}
           </div>
           <div className="hero-panel__actions">
             <label className="button button--ghost file-button">
@@ -295,13 +285,7 @@ function App() {
         {importError ? <p className="error-text" style={{ marginTop: "0.75rem" }}>{importError}</p> : null}
 
         {/* CORS notice */}
-        <section className="notice-panel">
-          <Sparkles size={16} />
-          <p>
-            Manifest syncing is client-side. Requires the manifest host to allow CORS browser
-            fetches.
-          </p>
-        </section>
+        {/* notice-panel removed */}
 
         {/* ── STEP 1: Manifest sync ── */}
         <section className="panel">

@@ -243,20 +243,13 @@ textarea {
   gap: 1rem;
 }
 
+.hero-panel--compact {
+  padding: 1.15rem 1.7rem;
+  margin-bottom: 0.5rem;
+}
+
 .hero-panel__copy {
   max-width: 760px;
-}
-
-.hero-panel__copy h2 {
-  font-size: clamp(1.9rem, 4vw, 2.8rem);
-  line-height: 1.05;
-  margin-bottom: 0.75rem;
-}
-
-.hero-panel__copy p:last-child {
-  margin: 0;
-  max-width: 660px;
-  font-size: 1rem;
 }
 
 .hero-panel__actions {
@@ -1343,6 +1336,7 @@ textarea {
 }
 
 /* ─── Add folder button ──────────────────────────────────────── */
+
 .add-folder-btn {
   display: flex;
   align-items: center;
