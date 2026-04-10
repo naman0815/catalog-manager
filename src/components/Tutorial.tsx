@@ -270,10 +270,16 @@ export function TutorialOverlay() {
     if (active && stepIdx >= TUTORIAL_STEPS.length) {
       setActive(false);
       setHighlightRetake(true);
-      const t = setTimeout(() => setHighlightRetake(false), 3000);
-      return () => clearTimeout(t);
     }
   }, [active, stepIdx]);
+
+  // Self-clearing highlight effect
+  useEffect(() => {
+    if (highlightRetake) {
+      const t = setTimeout(() => setHighlightRetake(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [highlightRetake]);
 
   useEffect(() => {
     if (!highlightRetake) {
