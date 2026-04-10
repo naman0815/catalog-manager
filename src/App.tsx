@@ -65,8 +65,6 @@ function App() {
   }, []);
 
   const manifestSynced = !!manifestState.data;
-  // Highlight Step 1 when collections exist but manifest isn't synced (e.g. after JSON import)
-  const shouldHighlightSync = collections.length > 0 && !manifestSynced;
 
   const totalFolders = useMemo(
     () => collections.reduce((sum, c) => sum + c.folders.length, 0),

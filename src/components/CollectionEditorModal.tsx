@@ -527,7 +527,6 @@ export function CollectionEditorModal({
   manifest,
   onClose,
   onSave,
-  preventOutsideClick = false,
 }: CollectionEditorModalProps) {
   const [draft, setDraft] = useState<TopLevelCollection>(collection);
   const [step, setStep] = useState<CollectionStep>("basics");
