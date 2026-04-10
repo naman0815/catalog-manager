@@ -13,7 +13,7 @@ A tool to organize, filter, and create custom collections for [Nuvio](https://gi
 <img width="1470" height="956" alt="Screenshot 2026-04-10 at 10 49 26 PM" src="https://github.com/user-attachments/assets/c470c437-6d84-48a8-95e4-f2cba051678c" />
 
 
-# 🛠️ Developer Setup & Self-Hosting
+# Developer Setup & Self-Hosting
 
 If you want to run the Catalog Manager locally or host it on your own server (e.g., GitHub Pages, Vercel, or a private VPS), follow these steps:
 
