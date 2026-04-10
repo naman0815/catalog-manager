@@ -173,7 +173,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
               <button id="tut-folder-hide-title" className="toggle-row" type="button" onClick={() => update("hideTitle", !draft.hideTitle)}>
                 <div>
                   <strong>Hide title on the card</strong>
-                  <span>Useful when the cover already contains branding.</span>
+                  <span>Useful when the cover already contains text.</span>
                 </div>
                 <span className={`switch ${draft.hideTitle ? "is-on" : ""}`} />
               </button>

@@ -242,10 +242,7 @@ function App() {
             </button>
           </div>
 
-          <p className="note">
-            Load the manifest once here. Every folder inside every collection will pick from the
-            same catalog list.
-          </p>
+
           {manifestState.error ? <p className="error-text">{manifestState.error}</p> : null}
         </section>
 
