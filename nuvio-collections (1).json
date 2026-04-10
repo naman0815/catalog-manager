@@ -1,0 +1,143 @@
+[
+  {
+    "id": "841d2308-4ec8-4a33-af88-3ffc679bf471",
+    "title": "Streaming Services",
+    "backdropImageUrl": null,
+    "pinToTop": true,
+    "focusGlowEnabled": true,
+    "viewMode": "TABBED_GRID",
+    "showAllTab": true,
+    "folders": [
+      {
+        "id": "47bc8e17-d9ef-4291-8254-3c28a63f23ed",
+        "title": "Netflix",
+        "coverImageUrl": "https://i.postimg.cc/zD2ZBVpZ/image.png",
+        "focusGifUrl": null,
+        "coverEmoji": null,
+        "tileShape": "POSTER",
+        "hideTitle": true,
+        "catalogSources": [
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "movie",
+            "catalogId": "95ae3b0.tmdb.discover.movie.streaming_netflix_us_8_0.mnocn114"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "series",
+            "catalogId": "95ae3b0.tmdb.discover.series.streaming_netflix_us_8_0.mnocn114"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "movie",
+            "catalogId": "d08e3b0.flixpatrol-netflix-movies"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "series",
+            "catalogId": "d08e3b0.flixpatrol-netflix-series"
+          }
+        ],
+        "_coverMode": "image"
+      },
+      {
+        "id": "651c9cd6-d6d7-41ba-a38c-a9208b6b97b5",
+        "title": "Prime Video",
+        "coverImageUrl": "https://i.postimg.cc/fyKSY9Z8/IMG-0107.png",
+        "focusGifUrl": null,
+        "coverEmoji": null,
+        "tileShape": "POSTER",
+        "hideTitle": true,
+        "catalogSources": [
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "movie",
+            "catalogId": "95ae3b0.tmdb.discover.movie.streaming_prime_video_9_3.mnocn114"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "series",
+            "catalogId": "95ae3b0.tmdb.discover.series.streaming_prime_video_9_3.mnocn114"
+          }
+        ],
+        "_coverMode": "image"
+      },
+      {
+        "id": "6ebb9ff4-4470-43b0-8710-258451f255e3",
+        "title": "Apple TV",
+        "coverImageUrl": "https://i.postimg.cc/L8YHRzMj/image.png",
+        "focusGifUrl": null,
+        "coverEmoji": null,
+        "tileShape": "POSTER",
+        "hideTitle": true,
+        "catalogSources": [
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "movie",
+            "catalogId": "95ae3b0.tmdb.discover.movie.streaming_apple_tv_us_350_4.mnocn114"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "series",
+            "catalogId": "95ae3b0.tmdb.discover.series.streaming_apple_tv_us_350_4.mnocn114"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "movie",
+            "catalogId": "95ae3b0.tmdb.discover.movie.streaming_apple_tv_in_350_8.mnocn114"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "series",
+            "catalogId": "95ae3b0.tmdb.discover.series.streaming_apple_tv_in_350_8.mnocn114"
+          }
+        ],
+        "_coverMode": "image"
+      },
+      {
+        "id": "c694e672-b380-483f-a0fc-bc5fa0279446",
+        "title": "Discovery+",
+        "coverImageUrl": "https://i.postimg.cc/zBvmFmnx/IMG-0113.png",
+        "focusGifUrl": null,
+        "coverEmoji": null,
+        "tileShape": "POSTER",
+        "hideTitle": true,
+        "catalogSources": [
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "movie",
+            "catalogId": "95ae3b0.tmdb.discover.movie.streaming_discovery_520_6.mnocn114"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "series",
+            "catalogId": "95ae3b0.tmdb.discover.series.streaming_discovery_520_6.mnocn114"
+          }
+        ],
+        "_coverMode": "image"
+      },
+      {
+        "id": "ede0bf34-740f-4565-8e0a-10a201ea0676",
+        "title": "HBO Max",
+        "coverImageUrl": "https://i.postimg.cc/C1Hvq6bm/image.png",
+        "focusGifUrl": null,
+        "coverEmoji": null,
+        "tileShape": "POSTER",
+        "hideTitle": false,
+        "catalogSources": [
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "movie",
+            "catalogId": "95ae3b0.tmdb.discover.movie.streaming_hbo_max_1899_1.mnocn114"
+          },
+          {
+            "addonId": "com.aiostreams.viren070.3bef4ffd-95b",
+            "type": "series",
+            "catalogId": "95ae3b0.tmdb.discover.series.streaming_hbo_max_1899_1.mnocn114"
+          }
+        ],
+        "_coverMode": "image"
+      }
+    ]
+  }
+]
