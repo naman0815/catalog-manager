@@ -58,7 +58,6 @@ type CollectionStep = "basics" | "folders" | "appearance";
 interface CollectionEditorModalProps {
   collection: TopLevelCollection;
   manifest: ParsedManifest | null;
-  manifestError: string | null;
   onClose: () => void;
   onSave: (collection: TopLevelCollection) => void;
 }
@@ -512,7 +511,6 @@ const TOP_STEPS: { id: CollectionStep; label: string }[] = [
 export function CollectionEditorModal({
   collection,
   manifest,
-  manifestError,
   onClose,
   onSave,
 }: CollectionEditorModalProps) {

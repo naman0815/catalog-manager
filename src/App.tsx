@@ -481,7 +481,6 @@ function App() {
         <CollectionEditorModal
           collection={editingCollection}
           manifest={manifestState.data}
-          manifestError={manifestState.error}
           onClose={() => setEditingCollection(null)}
           onSave={handleSaveCollection}
         />
