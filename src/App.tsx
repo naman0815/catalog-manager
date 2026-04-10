@@ -125,7 +125,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "nuvio-collections.json";
+    link.download = "collections.json";
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -141,7 +141,6 @@ function App() {
             <Box size={20} />
           </div>
           <div>
-            <p>Nuvio</p>
             <h1>Catalog Manager</h1>
           </div>
         </div>

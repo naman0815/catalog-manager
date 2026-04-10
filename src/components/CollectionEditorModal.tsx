@@ -676,7 +676,7 @@ export function CollectionEditorModal({
                 <button className="toggle-row" type="button" onClick={() => updateCollection("pinToTop", !draft.pinToTop)}>
                   <div>
                     <strong>Pin above catalogs</strong>
-                    <span>Keep the collection visible before standard Nuvio catalogs.</span>
+                    <span>Keep the collection visible before standard catalogs.</span>
                   </div>
                   <span className={`switch ${draft.pinToTop ? "is-on" : ""}`} />
                 </button>

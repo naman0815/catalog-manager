@@ -71,7 +71,7 @@ export function TutorialOverlay() {
   const step = TUTORIAL_STEPS[stepIdx];
 
   useEffect(() => {
-    const seen = localStorage.getItem("nuvio_tutorial_seen");
+    const seen = localStorage.getItem("tutorial_seen");
     if (!seen) {
       setShowPrompt(true);
     }
@@ -160,7 +160,7 @@ export function TutorialOverlay() {
       setActive(false);
       setShowPrompt(true);
       setHighlightRetake(false);
-      localStorage.removeItem("nuvio_tutorial_seen");
+      localStorage.removeItem("tutorial_seen");
     };
     window.addEventListener("restart-tutorial", handleRestart);
     return () => window.removeEventListener("restart-tutorial", handleRestart);
@@ -246,7 +246,7 @@ export function TutorialOverlay() {
   const handleStart = () => {
     setShowPrompt(false);
     setActive(true);
-    localStorage.setItem("nuvio_tutorial_seen", "true");
+    localStorage.setItem("tutorial_seen", "true");
 
     // Jump strictly to the first element's position immediately
     setTimeout(() => {
@@ -262,7 +262,7 @@ export function TutorialOverlay() {
 
   const handleDecline = () => {
     setShowPrompt(false);
-    localStorage.setItem("nuvio_tutorial_seen", "true");
+    localStorage.setItem("tutorial_seen", "true");
   };
 
   // When tutorial completes
