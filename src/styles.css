@@ -783,14 +783,37 @@ textarea {
   cursor: pointer;
 }
 
+.catalog-list__item.is-dragging {
+  opacity: 0.55;
+}
+
 .catalog-list__item>div {
   min-width: 0;
+}
+
+.catalog-list__item-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.catalog-list__drag-handle {
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  flex-shrink: 0;
 }
 
 .catalog-list__item.is-selected,
 .catalog-list__item--active {
   border-color: rgba(89, 118, 255, 0.34);
   background: rgba(89, 118, 255, 0.1);
+}
+
+.catalog-list__item--missing {
+  border-color: rgba(255, 103, 125, 0.35);
+  background: rgba(255, 103, 125, 0.09);
 }
 
 .catalog-list__item strong {
@@ -1213,11 +1236,16 @@ textarea {
   border: 1px solid var(--panel-border);
   background: rgba(16, 21, 32, 0.6);
   overflow: hidden;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
 }
 
 .folder-row.is-expanded {
   border-color: rgba(89, 118, 255, 0.4);
+}
+
+.folder-row.is-dragging {
+  opacity: 0.55;
+  transform: scale(0.985);
 }
 
 .folder-row__summary {
@@ -1231,6 +1259,13 @@ textarea {
 
 .folder-row__summary:hover {
   background: rgba(255, 255, 255, 0.03);
+}
+
+.folder-row__drag-handle {
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  flex-shrink: 0;
 }
 
 .folder-row__thumb {
@@ -1468,6 +1503,39 @@ textarea {
 /* ─── Collection card (with action buttons at bottom) ────────── */
 .collection-card {
   position: relative;
+  transition: transform 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.collection-card__drag-badge {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  border: 1px dashed rgba(127, 151, 196, 0.28);
+  background: rgba(9, 12, 18, 0.72);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.collection-card:hover .collection-card__drag-badge,
+.collection-card.is-dragging .collection-card__drag-badge {
+  border-color: rgba(89, 118, 255, 0.38);
+  background: rgba(16, 22, 34, 0.9);
+  color: var(--text-main);
+}
+
+.collection-card.is-dragging {
+  opacity: 0.55;
+  transform: scale(0.985);
+  border-color: rgba(89, 118, 255, 0.35);
 }
 
 .collection-card__actions {

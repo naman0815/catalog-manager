@@ -4,6 +4,7 @@ import {
   Check,
   ChevronRight,
   Film,
+  GripVertical,
   Grid2x2,
   Image,
   Pencil,
@@ -15,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import type { CatalogSource, Folder, ParsedManifest, TopLevelCollection } from "../types";
+import { moveItem } from "../utils/manifestParser";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -86,6 +88,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
   const [catalogFilter, setCatalogFilter] = useState("");
   const deferredFilter = useDeferredValue(catalogFilter);
   const [newPosterUrl, setNewPosterUrl] = useState("");
+  const [draggingCatalogKey, setDraggingCatalogKey] = useState<string | null>(null);
 
   const update = <K extends keyof Folder>(field: K, value: Folder[K]) =>
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -103,6 +106,16 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [deferredFilter, manifest]);
 
+  const catalogNameByKey = useMemo(() => {
+    const catalogs = manifest?.catalogs ?? [];
+    return new Map(
+      catalogs.map((catalog) => [
+        `${manifest?.addonId ?? ""}::${catalog.type}::${catalog.id}`,
+        catalog.name,
+      ]),
+    );
+  }, [manifest]);
+
   const addCatalog = (catalogId: string, type: string) => {
     if (!manifest) return;
     const src: CatalogSource = { addonId: manifest.addonId, catalogId, type };
@@ -118,6 +131,21 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
         (s) => !(s.addonId === src.addonId && s.catalogId === src.catalogId && s.type === src.type),
       ),
     );
+
+  const moveCatalogByKey = (fromKey: string, toKey: string) => {
+    if (fromKey === toKey) return;
+
+    update("catalogSources", (() => {
+      const fromIndex = draft.catalogSources.findIndex(
+        (source) => `${source.addonId}::${source.type}::${source.catalogId}` === fromKey,
+      );
+      const toIndex = draft.catalogSources.findIndex(
+        (source) => `${source.addonId}::${source.type}::${source.catalogId}` === toKey,
+      );
+
+      return moveItem(draft.catalogSources, fromIndex, toIndex);
+    })());
+  };
 
   const applyPosterUrl = () => {
     if (!newPosterUrl.trim()) return;
@@ -379,14 +407,38 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
               </div>
               <div className="catalog-list">
                 {draft.catalogSources.length ? (
-                  draft.catalogSources.map((src) => (
+                  draft.catalogSources.map((src) => {
+                    const sourceKey = `${src.addonId}::${src.type}::${src.catalogId}`;
+                    const displayName = catalogNameByKey.get(sourceKey) ?? src.catalogId;
+
+                    return (
                     <div
-                      key={`${src.addonId}-${src.type}-${src.catalogId}`}
-                      className="catalog-list__item catalog-list__item--active"
+                      key={sourceKey}
+                      className={`catalog-list__item catalog-list__item--active ${src._missingFromManifest ? "catalog-list__item--missing" : ""} ${draggingCatalogKey === sourceKey ? "is-dragging" : ""}`}
+                      draggable
+                      onDragStart={() => setDraggingCatalogKey(sourceKey)}
+                      onDragEnd={() => setDraggingCatalogKey(null)}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        if (draggingCatalogKey) moveCatalogByKey(draggingCatalogKey, sourceKey);
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        setDraggingCatalogKey(null);
+                      }}
                     >
-                      <div>
-                        <strong>{src.catalogId}</strong>
-                        <span>{formatCatalogType(src.type)}</span>
+                      <div className="catalog-list__item-main">
+                        <div className="catalog-list__drag-handle" aria-hidden="true">
+                          <GripVertical size={16} />
+                        </div>
+                        <div>
+                        <strong>{displayName}</strong>
+                        <span>
+                          {formatCatalogType(src.type)}
+                          {displayName !== src.catalogId ? ` • ${src.catalogId}` : ""}
+                          {src._missingFromManifest ? " • missing from manifest" : ""}
+                        </span>
+                      </div>
                       </div>
                       <button
                         className="icon-button icon-button--danger"
@@ -397,7 +449,7 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
                         <X size={13} />
                       </button>
                     </div>
-                  ))
+                  )})
                 ) : (
                   <div className="catalog-list__empty">No catalogs linked yet.</div>
                 )}
@@ -453,16 +505,46 @@ interface FolderRowProps {
   onToggle: () => void;
   onSave: (f: Folder) => void;
   onDelete: () => void;
+  draggable: boolean;
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver: () => void;
 }
 
-function FolderRow({ folder, isExpanded, manifest, onToggle, onSave, onDelete }: FolderRowProps) {
+function FolderRow({
+  folder,
+  isExpanded,
+  manifest,
+  onToggle,
+  onSave,
+  onDelete,
+  draggable,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+}: FolderRowProps) {
   const pa = shapeAspectRatios[folder.tileShape];
 
   return (
-    <div className={`folder-row ${isExpanded ? "is-expanded" : ""}`}>
+    <div
+      className={`folder-row ${isExpanded ? "is-expanded" : ""} ${isDragging ? "is-dragging" : ""}`}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver();
+      }}
+      onDrop={(event) => event.preventDefault()}
+    >
       <div className="folder-row__summary" onClick={onToggle} role="button" tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && onToggle()}>
         {/* mini poster thumb */}
+        <div className="folder-row__drag-handle" aria-hidden="true">
+          <GripVertical size={16} />
+        </div>
         <div className="folder-row__thumb" style={{ width: 36, aspectRatio: pa }}>
           {folder._coverMode === "image" && folder.coverImageUrl ? (
             <img src={folder.coverImageUrl} alt={folder.title} />
@@ -531,6 +613,7 @@ export function CollectionEditorModal({
   const [draft, setDraft] = useState<TopLevelCollection>(collection);
   const [step, setStep] = useState<CollectionStep>("basics");
   const [expandedFolderId, setExpandedFolderId] = useState<string | null>(null);
+  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
 
   const updateCollection = <K extends keyof TopLevelCollection>(field: K, value: TopLevelCollection[K]) =>
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -559,6 +642,20 @@ export function CollectionEditorModal({
   const deleteFolder = (id: string) => {
     setDraft((prev) => ({ ...prev, folders: prev.folders.filter((f) => f.id !== id) }));
     if (expandedFolderId === id) setExpandedFolderId(null);
+  };
+
+  const moveFolderById = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+
+    setDraft((prev) => {
+      const fromIndex = prev.folders.findIndex((folder) => folder.id === fromId);
+      const toIndex = prev.folders.findIndex((folder) => folder.id === toId);
+
+      return {
+        ...prev,
+        folders: moveItem(prev.folders, fromIndex, toIndex),
+      };
+    });
   };
 
   const stepIndex = TOP_STEPS.findIndex((s) => s.id === step);
@@ -609,11 +706,18 @@ export function CollectionEditorModal({
                       folder={folder}
                       isExpanded={expandedFolderId === folder.id}
                       manifest={manifest}
+                      draggable={expandedFolderId === null}
+                      isDragging={draggingFolderId === folder.id}
                       onToggle={() =>
                         setExpandedFolderId((id) => (id === folder.id ? null : folder.id))
                       }
                       onSave={(updated) => saveFolder(folder.id, updated)}
                       onDelete={() => deleteFolder(folder.id)}
+                      onDragStart={() => setDraggingFolderId(folder.id)}
+                      onDragEnd={() => setDraggingFolderId(null)}
+                      onDragOver={() => {
+                        if (draggingFolderId) moveFolderById(draggingFolderId, folder.id);
+                      }}
                     />
                   ))}
                 </div>

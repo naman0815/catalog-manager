@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Download,
+  GripVertical,
   Import,
   Pencil,
   Plus,
@@ -16,7 +17,14 @@ import { CollectionEditorModal } from "./components/CollectionEditorModal";
 import { TutorialOverlay } from "./components/Tutorial";
 
 import type { ParsedManifest, TopLevelCollection } from "./types";
-import { createEmptyCollection, fetchManifest, normalizeCollection } from "./utils/manifestParser";
+import {
+  applyManifestAvailability,
+  createEmptyCollection,
+  extractCollectionsFromPayload,
+  fetchManifest,
+  moveItem,
+  normalizeCollection,
+} from "./utils/manifestParser";
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 
@@ -37,6 +45,7 @@ function App() {
 
   // ── Modal state: null = closed, TopLevelCollection = editing ──
   const [editingCollection, setEditingCollection] = useState<TopLevelCollection | null>(null);
+  const [draggingCollectionId, setDraggingCollectionId] = useState<string | null>(null);
 
   // ── Persist manifest URL to localStorage ──
   useEffect(() => {
@@ -52,7 +61,13 @@ function App() {
   useEffect(() => {
     const savedCols = localStorage.getItem("cm_collections");
     if (savedCols) {
-      try { setCollections(JSON.parse(savedCols)); } catch { /* ignore */ }
+      try {
+        const parsed = JSON.parse(savedCols);
+        const normalized = extractCollectionsFromPayload(parsed).map((item) => normalizeCollection(item));
+        setCollections(normalized);
+      } catch {
+        /* ignore */
+      }
     }
     const savedUrl = localStorage.getItem("cm_manifestUrl");
     if (savedUrl) {
@@ -63,6 +78,10 @@ function App() {
         .catch(() => setManifestState({ loading: false, error: null, data: null }));
     }
   }, []);
+
+  useEffect(() => {
+    setCollections((prev) => applyManifestAvailability(prev, manifestState.data));
+  }, [manifestState.data]);
 
   const manifestSynced = !!manifestState.data;
 
@@ -122,12 +141,23 @@ function App() {
     setCollections((prev) => prev.filter((c) => c.id !== id));
   };
 
+  const moveCollectionById = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+
+    setCollections((prev) => {
+      const fromIndex = prev.findIndex((collection) => collection.id === fromId);
+      const toIndex = prev.findIndex((collection) => collection.id === toId);
+      return moveItem(prev, fromIndex, toIndex);
+    });
+  };
+
   // ── Import ──
   const handleImportPayload = (payload: unknown) => {
     try {
-      const raw = Array.isArray(payload) ? payload : [payload];
-      const normalized = raw.map((item) => normalizeCollection(item));
-      setCollections(normalized);
+      const normalized = extractCollectionsFromPayload(payload).map((item) =>
+        normalizeCollection(item),
+      );
+      setCollections(applyManifestAvailability(normalized, manifestState.data));
       setImportError(null);
       // Flag to highlight sync panel only when this was triggered by an actual import action
       if (!manifestSynced) setImportedWithoutSync(true);
@@ -301,8 +331,29 @@ function App() {
             <>
               <div className="folder-grid">
                 {collections.map((col) => (
-                  <div key={col.id} className="folder-card collection-card">
-                    <div className="folder-card__media">
+                  <div
+                    key={col.id}
+                    className={`folder-card collection-card ${draggingCollectionId === col.id ? "is-dragging" : ""}`}
+                    draggable
+                    onDragStart={() => setDraggingCollectionId(col.id)}
+                    onDragEnd={() => setDraggingCollectionId(null)}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (draggingCollectionId) moveCollectionById(draggingCollectionId, col.id);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setDraggingCollectionId(null);
+                    }}
+                  >
+                    <div className="collection-card__drag-badge" aria-hidden="true">
+                      <GripVertical size={14} />
+                      <span>Drag to reorder</span>
+                    </div>
+                    <div
+                      className="folder-card__media"
+                      onClick={() => handleEditCollection(col)}
+                    >
                       {col.folders.length > 0 ? (
                         <div className="folder-card__poster-stack">
                           {col.folders.slice(0, 3).map((f) =>
@@ -321,7 +372,10 @@ function App() {
                         </span>
                       )}
                     </div>
-                    <div className="folder-card__body">
+                    <div
+                      className="folder-card__body"
+                      onClick={() => handleEditCollection(col)}
+                    >
                       <div className="folder-card__eyebrow">Collection</div>
                       <h3>{col.title || "Untitled collection"}</h3>
                       <p>
