@@ -203,7 +203,12 @@ function normalizeManifestCatalog(input: unknown): ManifestCatalog | null {
 
 export async function fetchManifest(manifestInput: string): Promise<ParsedManifest> {
   const manifestUrl = normalizeManifestUrl(manifestInput);
-  const response = await fetch(manifestUrl);
+  const requestUrl = new URL(manifestUrl);
+  requestUrl.searchParams.set("_cmts", Date.now().toString());
+
+  const response = await fetch(requestUrl.toString(), {
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     throw new Error(`Manifest request failed with status ${response.status}`);

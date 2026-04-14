@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
 import {
+  ArrowDown,
+  ArrowUp,
   Box,
   CheckCircle2,
   ChevronRight,
@@ -29,6 +31,7 @@ import {
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 function App() {
+  const [isMobile, setIsMobile] = useState(false);
   // ── Manifest state ──
   const [manifestUrl, setManifestUrl] = useState("");
   const [manifestState, setManifestState] = useState<{
@@ -77,6 +80,17 @@ function App() {
         .then((data) => setManifestState({ loading: false, error: null, data }))
         .catch(() => setManifestState({ loading: false, error: null, data: null }));
     }
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 720px)");
+    const applyMatch = (event: MediaQueryList | MediaQueryListEvent) => {
+      setIsMobile(event.matches);
+    };
+
+    applyMatch(mediaQuery);
+    mediaQuery.addEventListener("change", applyMatch);
+    return () => mediaQuery.removeEventListener("change", applyMatch);
   }, []);
 
   useEffect(() => {
@@ -149,6 +163,10 @@ function App() {
       const toIndex = prev.findIndex((collection) => collection.id === toId);
       return moveItem(prev, fromIndex, toIndex);
     });
+  };
+
+  const moveCollectionByIndex = (fromIndex: number, toIndex: number) => {
+    setCollections((prev) => moveItem(prev, fromIndex, toIndex));
   };
 
   // ── Import ──
@@ -269,7 +287,7 @@ function App() {
                 )}
               </h2>
             </div>
-            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               <label className="button button--ghost file-button" style={{ padding: "0.4rem 0.8rem" }}>
                 <Import size={14} />
                 Import JSON
@@ -330,26 +348,33 @@ function App() {
           ) : (
             <>
               <div className="folder-grid">
-                {collections.map((col) => (
+                {collections.map((col, index) => (
                   <div
                     key={col.id}
                     className={`folder-card collection-card ${draggingCollectionId === col.id ? "is-dragging" : ""}`}
-                    draggable
-                    onDragStart={() => setDraggingCollectionId(col.id)}
+                    draggable={!isMobile}
+                    onDragStart={() => {
+                      if (isMobile) return;
+                      setDraggingCollectionId(col.id);
+                    }}
                     onDragEnd={() => setDraggingCollectionId(null)}
                     onDragOver={(event) => {
+                      if (isMobile) return;
                       event.preventDefault();
                       if (draggingCollectionId) moveCollectionById(draggingCollectionId, col.id);
                     }}
                     onDrop={(event) => {
+                      if (isMobile) return;
                       event.preventDefault();
                       setDraggingCollectionId(null);
                     }}
                   >
-                    <div className="collection-card__drag-badge" aria-hidden="true">
+                    {!isMobile && (
+                      <div className="collection-card__drag-badge" aria-hidden="true">
                       <GripVertical size={14} />
                       <span>Drag to reorder</span>
-                    </div>
+                      </div>
+                    )}
                     <div
                       className="folder-card__media"
                       onClick={() => handleEditCollection(col)}
@@ -385,6 +410,28 @@ function App() {
                       </p>
                     </div>
                     <div className="collection-card__actions">
+                      {isMobile && (
+                        <div className="mobile-reorder-controls" aria-label={`Reorder ${col.title || "collection"}`}>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => moveCollectionByIndex(index, index - 1)}
+                            aria-label={`Move ${col.title} up`}
+                            disabled={index === 0}
+                          >
+                            <ArrowUp size={15} />
+                          </button>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => moveCollectionByIndex(index, index + 1)}
+                            aria-label={`Move ${col.title} down`}
+                            disabled={index === collections.length - 1}
+                          >
+                            <ArrowDown size={15} />
+                          </button>
+                        </div>
+                      )}
                       <button
                         className="icon-button"
                         type="button"
