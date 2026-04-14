@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
 import {
+  ArrowDown,
+  ArrowUp,
   Box,
   CheckCircle2,
   ChevronRight,
   Download,
+  GripVertical,
   Import,
   Pencil,
   Plus,
@@ -16,11 +19,19 @@ import { CollectionEditorModal } from "./components/CollectionEditorModal";
 import { TutorialOverlay } from "./components/Tutorial";
 
 import type { ParsedManifest, TopLevelCollection } from "./types";
-import { createEmptyCollection, fetchManifest, normalizeCollection } from "./utils/manifestParser";
+import {
+  applyManifestAvailability,
+  createEmptyCollection,
+  extractCollectionsFromPayload,
+  fetchManifest,
+  moveItem,
+  normalizeCollection,
+} from "./utils/manifestParser";
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 function App() {
+  const [isMobile, setIsMobile] = useState(false);
   // ── Manifest state ──
   const [manifestUrl, setManifestUrl] = useState("");
   const [manifestState, setManifestState] = useState<{
@@ -37,6 +48,7 @@ function App() {
 
   // ── Modal state: null = closed, TopLevelCollection = editing ──
   const [editingCollection, setEditingCollection] = useState<TopLevelCollection | null>(null);
+  const [draggingCollectionId, setDraggingCollectionId] = useState<string | null>(null);
 
   // ── Persist manifest URL to localStorage ──
   useEffect(() => {
@@ -52,7 +64,13 @@ function App() {
   useEffect(() => {
     const savedCols = localStorage.getItem("cm_collections");
     if (savedCols) {
-      try { setCollections(JSON.parse(savedCols)); } catch { /* ignore */ }
+      try {
+        const parsed = JSON.parse(savedCols);
+        const normalized = extractCollectionsFromPayload(parsed).map((item) => normalizeCollection(item));
+        setCollections(normalized);
+      } catch {
+        /* ignore */
+      }
     }
     const savedUrl = localStorage.getItem("cm_manifestUrl");
     if (savedUrl) {
@@ -63,6 +81,21 @@ function App() {
         .catch(() => setManifestState({ loading: false, error: null, data: null }));
     }
   }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 720px)");
+    const applyMatch = (event: MediaQueryList | MediaQueryListEvent) => {
+      setIsMobile(event.matches);
+    };
+
+    applyMatch(mediaQuery);
+    mediaQuery.addEventListener("change", applyMatch);
+    return () => mediaQuery.removeEventListener("change", applyMatch);
+  }, []);
+
+  useEffect(() => {
+    setCollections((prev) => applyManifestAvailability(prev, manifestState.data));
+  }, [manifestState.data]);
 
   const manifestSynced = !!manifestState.data;
 
@@ -122,12 +155,27 @@ function App() {
     setCollections((prev) => prev.filter((c) => c.id !== id));
   };
 
+  const moveCollectionById = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+
+    setCollections((prev) => {
+      const fromIndex = prev.findIndex((collection) => collection.id === fromId);
+      const toIndex = prev.findIndex((collection) => collection.id === toId);
+      return moveItem(prev, fromIndex, toIndex);
+    });
+  };
+
+  const moveCollectionByIndex = (fromIndex: number, toIndex: number) => {
+    setCollections((prev) => moveItem(prev, fromIndex, toIndex));
+  };
+
   // ── Import ──
   const handleImportPayload = (payload: unknown) => {
     try {
-      const raw = Array.isArray(payload) ? payload : [payload];
-      const normalized = raw.map((item) => normalizeCollection(item));
-      setCollections(normalized);
+      const normalized = extractCollectionsFromPayload(payload).map((item) =>
+        normalizeCollection(item),
+      );
+      setCollections(applyManifestAvailability(normalized, manifestState.data));
       setImportError(null);
       // Flag to highlight sync panel only when this was triggered by an actual import action
       if (!manifestSynced) setImportedWithoutSync(true);
@@ -239,7 +287,7 @@ function App() {
                 )}
               </h2>
             </div>
-            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               <label className="button button--ghost file-button" style={{ padding: "0.4rem 0.8rem" }}>
                 <Import size={14} />
                 Import JSON
@@ -300,9 +348,37 @@ function App() {
           ) : (
             <>
               <div className="folder-grid">
-                {collections.map((col) => (
-                  <div key={col.id} className="folder-card collection-card">
-                    <div className="folder-card__media">
+                {collections.map((col, index) => (
+                  <div
+                    key={col.id}
+                    className={`folder-card collection-card ${draggingCollectionId === col.id ? "is-dragging" : ""}`}
+                    draggable={!isMobile}
+                    onDragStart={() => {
+                      if (isMobile) return;
+                      setDraggingCollectionId(col.id);
+                    }}
+                    onDragEnd={() => setDraggingCollectionId(null)}
+                    onDragOver={(event) => {
+                      if (isMobile) return;
+                      event.preventDefault();
+                      if (draggingCollectionId) moveCollectionById(draggingCollectionId, col.id);
+                    }}
+                    onDrop={(event) => {
+                      if (isMobile) return;
+                      event.preventDefault();
+                      setDraggingCollectionId(null);
+                    }}
+                  >
+                    {!isMobile && (
+                      <div className="collection-card__drag-badge" aria-hidden="true">
+                      <GripVertical size={14} />
+                      <span>Drag to reorder</span>
+                      </div>
+                    )}
+                    <div
+                      className="folder-card__media"
+                      onClick={() => handleEditCollection(col)}
+                    >
                       {col.folders.length > 0 ? (
                         <div className="folder-card__poster-stack">
                           {col.folders.slice(0, 3).map((f) =>
@@ -321,7 +397,10 @@ function App() {
                         </span>
                       )}
                     </div>
-                    <div className="folder-card__body">
+                    <div
+                      className="folder-card__body"
+                      onClick={() => handleEditCollection(col)}
+                    >
                       <div className="folder-card__eyebrow">Collection</div>
                       <h3>{col.title || "Untitled collection"}</h3>
                       <p>
@@ -331,6 +410,28 @@ function App() {
                       </p>
                     </div>
                     <div className="collection-card__actions">
+                      {isMobile && (
+                        <div className="mobile-reorder-controls" aria-label={`Reorder ${col.title || "collection"}`}>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => moveCollectionByIndex(index, index - 1)}
+                            aria-label={`Move ${col.title} up`}
+                            disabled={index === 0}
+                          >
+                            <ArrowUp size={15} />
+                          </button>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => moveCollectionByIndex(index, index + 1)}
+                            aria-label={`Move ${col.title} down`}
+                            disabled={index === collections.length - 1}
+                          >
+                            <ArrowDown size={15} />
+                          </button>
+                        </div>
+                      )}
                       <button
                         className="icon-button"
                         type="button"

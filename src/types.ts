@@ -2,6 +2,7 @@ export interface CatalogSource {
   addonId: string;
   type: string;
   catalogId: string;
+  _missingFromManifest?: boolean;
 }
 
 export interface ManifestCatalog {

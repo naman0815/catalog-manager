@@ -1,5 +1,11 @@
 import { v4 as uuidv4 } from "uuid";
-import type { Folder, ManifestCatalog, ParsedManifest, TopLevelCollection } from "../types";
+import type {
+  CatalogSource,
+  Folder,
+  ManifestCatalog,
+  ParsedManifest,
+  TopLevelCollection,
+} from "../types";
 
 const DEFAULT_VIEW_MODE: TopLevelCollection["viewMode"] = "TABBED_GRID";
 
@@ -9,6 +15,27 @@ function asString(value: unknown): string {
 
 function asNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+export function getCatalogSourceKey(source: CatalogSource): string {
+  return `${source.addonId}::${source.type}::${source.catalogId}`;
+}
+
+export function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length ||
+    fromIndex === toIndex
+  ) {
+    return items;
+  }
+
+  const next = [...items];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
 }
 
 function normalizeFolder(input: unknown): Folder {
@@ -33,6 +60,9 @@ function normalizeFolder(input: unknown): Folder {
             addonId: asString((source as { addonId?: unknown }).addonId),
             type: asString((source as { type?: unknown }).type),
             catalogId: asString((source as { catalogId?: unknown }).catalogId),
+            _missingFromManifest: Boolean(
+              (source as { _missingFromManifest?: unknown })._missingFromManifest,
+            ),
           }))
           .filter((source) => source.addonId && source.type && source.catalogId)
       : [],
@@ -82,6 +112,56 @@ export function normalizeCollection(input: unknown): TopLevelCollection {
   };
 }
 
+export function extractCollectionsFromPayload(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) return payload;
+
+  if (payload && typeof payload === "object") {
+    const collections = (payload as { collections?: unknown }).collections;
+    if (Array.isArray(collections)) return collections;
+  }
+
+  return [payload];
+}
+
+export function applyManifestAvailability(
+  collections: TopLevelCollection[],
+  manifest: ParsedManifest | null,
+): TopLevelCollection[] {
+  if (!manifest) {
+    return collections.map((collection) => ({
+      ...collection,
+      folders: collection.folders.map((folder) => ({
+        ...folder,
+        catalogSources: folder.catalogSources.map((source) => ({
+          ...source,
+          _missingFromManifest: false,
+        })),
+      })),
+    }));
+  }
+
+  const available = new Set(
+    manifest.catalogs.map((catalog) =>
+      getCatalogSourceKey({
+        addonId: manifest.addonId,
+        type: catalog.type,
+        catalogId: catalog.id,
+      }),
+    ),
+  );
+
+  return collections.map((collection) => ({
+    ...collection,
+    folders: collection.folders.map((folder) => ({
+      ...folder,
+      catalogSources: folder.catalogSources.map((source) => ({
+        ...source,
+        _missingFromManifest: !available.has(getCatalogSourceKey(source)),
+      })),
+    })),
+  }));
+}
+
 function normalizeManifestUrl(input: string): string {
   const candidate = input.trim();
   const parsed = new URL(candidate);
@@ -123,7 +203,12 @@ function normalizeManifestCatalog(input: unknown): ManifestCatalog | null {
 
 export async function fetchManifest(manifestInput: string): Promise<ParsedManifest> {
   const manifestUrl = normalizeManifestUrl(manifestInput);
-  const response = await fetch(manifestUrl);
+  const requestUrl = new URL(manifestUrl);
+  requestUrl.searchParams.set("_cmts", Date.now().toString());
+
+  const response = await fetch(requestUrl.toString(), {
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     throw new Error(`Manifest request failed with status ${response.status}`);

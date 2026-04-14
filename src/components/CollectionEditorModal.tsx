@@ -1,9 +1,13 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import {
+  ArrowDown,
+  ArrowUp,
   Check,
+  ChevronsUpDown,
   ChevronRight,
   Film,
+  GripVertical,
   Grid2x2,
   Image,
   Pencil,
@@ -15,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import type { CatalogSource, Folder, ParsedManifest, TopLevelCollection } from "../types";
+import { moveItem } from "../utils/manifestParser";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -76,16 +81,20 @@ interface CollectionEditorModalProps {
 interface FolderMiniEditorProps {
   folder: Folder;
   manifest: ParsedManifest | null;
+  isMobile: boolean;
   onSave: (f: Folder) => void;
   onCancel: () => void;
 }
 
-function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEditorProps) {
+function FolderMiniEditor({ folder, manifest, isMobile, onSave, onCancel }: FolderMiniEditorProps) {
   const [draft, setDraft] = useState<Folder>(folder);
   const [tab, setTab] = useState<"basics" | "catalogs" | "appearance">("basics");
   const [catalogFilter, setCatalogFilter] = useState("");
   const deferredFilter = useDeferredValue(catalogFilter);
   const [newPosterUrl, setNewPosterUrl] = useState("");
+  const [draggingCatalogKey, setDraggingCatalogKey] = useState<string | null>(null);
+  const [catalogPickerOpen, setCatalogPickerOpen] = useState(false);
+  const catalogPickerRef = useRef<HTMLDivElement | null>(null);
 
   const update = <K extends keyof Folder>(field: K, value: Folder[K]) =>
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -103,12 +112,24 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [deferredFilter, manifest]);
 
+  const catalogNameByKey = useMemo(() => {
+    const catalogs = manifest?.catalogs ?? [];
+    return new Map(
+      catalogs.map((catalog) => [
+        `${manifest?.addonId ?? ""}::${catalog.type}::${catalog.id}`,
+        catalog.name,
+      ]),
+    );
+  }, [manifest]);
+
   const addCatalog = (catalogId: string, type: string) => {
     if (!manifest) return;
     const src: CatalogSource = { addonId: manifest.addonId, catalogId, type };
     const key = `${src.addonId}::${src.type}::${src.catalogId}`;
     if (activeCatalogs.has(key)) return;
     update("catalogSources", [...draft.catalogSources, src]);
+    setCatalogFilter("");
+    setCatalogPickerOpen(false);
   };
 
   const removeCatalog = (src: CatalogSource) =>
@@ -118,6 +139,25 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
         (s) => !(s.addonId === src.addonId && s.catalogId === src.catalogId && s.type === src.type),
       ),
     );
+
+  const moveCatalogByKey = (fromKey: string, toKey: string) => {
+    if (fromKey === toKey) return;
+
+    update("catalogSources", (() => {
+      const fromIndex = draft.catalogSources.findIndex(
+        (source) => `${source.addonId}::${source.type}::${source.catalogId}` === fromKey,
+      );
+      const toIndex = draft.catalogSources.findIndex(
+        (source) => `${source.addonId}::${source.type}::${source.catalogId}` === toKey,
+      );
+
+      return moveItem(draft.catalogSources, fromIndex, toIndex);
+    })());
+  };
+
+  const moveCatalogByIndex = (fromIndex: number, toIndex: number) => {
+    update("catalogSources", moveItem(draft.catalogSources, fromIndex, toIndex));
+  };
 
   const applyPosterUrl = () => {
     if (!newPosterUrl.trim()) return;
@@ -136,6 +176,24 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
   ];
 
   const currentTabIndex = miniTabs.findIndex((t) => t.id === tab);
+
+  useEffect(() => {
+    if (!catalogPickerOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (catalogPickerRef.current?.contains(target)) return;
+      setCatalogPickerOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [catalogPickerOpen]);
 
   return (
     <div className="folder-mini-editor">
@@ -321,55 +379,117 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
         {/* ── Catalogs ── */}
         {tab === "catalogs" && (
           <div className="catalog-split">
-            {/* left: available */}
             <div className="catalog-panel">
               <div className="catalog-panel__header">
                 <div>
-                  <p className="panel__eyebrow">Available</p>
-                  <h3>From manifest</h3>
+                  <p className="panel__eyebrow">Add catalogs</p>
+                  <h3>{isMobile ? "Search manifest" : "From manifest"}</h3>
                 </div>
               </div>
-              <label id="tut-search-field" className="search-field">
-                <Search size={13} />
-                <input
-                  id="tut-search-catalog"
-                  type="search"
-                  value={catalogFilter}
-                  onChange={(e) => setCatalogFilter(e.target.value)}
-                  placeholder="Search catalogs"
-                />
-              </label>
-              <div className="catalog-list">
-                {visibleCatalogs.length ? (
-                  visibleCatalogs.map((cat) => {
-                    const key = `${manifest?.addonId ?? ""}::${cat.type}::${cat.id}`;
-                    const selected = activeCatalogs.has(key);
-                    return (
-                      <button
-                        id={visibleCatalogs.indexOf(cat) === 0 ? "tut-add-catalog" : undefined}
-                        key={`${cat.type}-${cat.id}`}
-                        className={`catalog-list__item ${selected ? "is-selected" : ""}`}
-                        type="button"
-                        onClick={() => addCatalog(cat.id, cat.type)}
-                        disabled={selected}
-                      >
-                        <div>
-                          <strong>{cat.name}</strong>
-                          <span>{formatCatalogType(cat.type)}</span>
-                        </div>
-                        {selected ? <Check size={14} /> : <span>Add</span>}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="catalog-list__empty">
-                    {manifest ? "No results." : "Sync a manifest first."}
+              {isMobile ? (
+                <div ref={catalogPickerRef} className="catalog-picker">
+                  <button
+                    className={`catalog-picker__trigger ${catalogPickerOpen ? "is-open" : ""}`}
+                    type="button"
+                    onClick={() => setCatalogPickerOpen((open) => !open)}
+                    disabled={!manifest}
+                  >
+                    <span>
+                      {manifest ? "Choose a catalog" : "Sync a manifest first"}
+                    </span>
+                    <ChevronsUpDown size={15} />
+                  </button>
+
+                  {catalogPickerOpen && manifest && (
+                    <div className="catalog-picker__menu">
+                      <label id="tut-search-field" className="search-field catalog-picker__search">
+                        <Search size={13} />
+                        <input
+                          id="tut-search-catalog"
+                          type="search"
+                          value={catalogFilter}
+                          onChange={(e) => setCatalogFilter(e.target.value)}
+                          placeholder="Search catalogs"
+                          autoFocus
+                        />
+                      </label>
+                      <div className="catalog-picker__results">
+                        {visibleCatalogs.length ? (
+                          visibleCatalogs.map((cat, catalogIndex) => {
+                            const key = `${manifest?.addonId ?? ""}::${cat.type}::${cat.id}`;
+                            const selected = activeCatalogs.has(key);
+                            return (
+                              <button
+                                id={catalogIndex === 0 ? "tut-add-catalog" : undefined}
+                                key={`${cat.type}-${cat.id}`}
+                                className={`catalog-list__item catalog-picker__option ${selected ? "is-selected" : ""}`}
+                                type="button"
+                                onClick={() => addCatalog(cat.id, cat.type)}
+                                disabled={selected}
+                              >
+                                <div>
+                                  <strong>{cat.name}</strong>
+                                  <span>
+                                    {formatCatalogType(cat.type)} • {cat.id}
+                                  </span>
+                                </div>
+                                {selected ? <Check size={14} /> : <span>Add</span>}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="catalog-list__empty catalog-list__empty--compact">
+                            No matching catalogs.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <label id="tut-search-field" className="search-field">
+                    <Search size={13} />
+                    <input
+                      id="tut-search-catalog"
+                      type="search"
+                      value={catalogFilter}
+                      onChange={(e) => setCatalogFilter(e.target.value)}
+                      placeholder="Search catalogs"
+                    />
+                  </label>
+                  <div className="catalog-list">
+                    {visibleCatalogs.length ? (
+                      visibleCatalogs.map((cat, catalogIndex) => {
+                        const key = `${manifest?.addonId ?? ""}::${cat.type}::${cat.id}`;
+                        const selected = activeCatalogs.has(key);
+                        return (
+                          <button
+                            id={catalogIndex === 0 ? "tut-add-catalog" : undefined}
+                            key={`${cat.type}-${cat.id}`}
+                            className={`catalog-list__item ${selected ? "is-selected" : ""}`}
+                            type="button"
+                            onClick={() => addCatalog(cat.id, cat.type)}
+                            disabled={selected}
+                          >
+                            <div>
+                              <strong>{cat.name}</strong>
+                              <span>{formatCatalogType(cat.type)}</span>
+                            </div>
+                            {selected ? <Check size={14} /> : <span>Add</span>}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="catalog-list__empty">
+                        {manifest ? "No results." : "Sync a manifest first."}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
 
-            {/* right: active */}
             <div className="catalog-panel">
               <div className="catalog-panel__header">
                 <div>
@@ -379,14 +499,43 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
               </div>
               <div className="catalog-list">
                 {draft.catalogSources.length ? (
-                  draft.catalogSources.map((src) => (
+                  draft.catalogSources.map((src, index) => {
+                    const sourceKey = `${src.addonId}::${src.type}::${src.catalogId}`;
+                    const displayName = catalogNameByKey.get(sourceKey) ?? src.catalogId;
+
+                    return (
                     <div
-                      key={`${src.addonId}-${src.type}-${src.catalogId}`}
-                      className="catalog-list__item catalog-list__item--active"
+                      key={sourceKey}
+                      className={`catalog-list__item catalog-list__item--active ${src._missingFromManifest ? "catalog-list__item--missing" : ""} ${draggingCatalogKey === sourceKey ? "is-dragging" : ""}`}
+                      draggable={!isMobile}
+                      onDragStart={() => {
+                        if (isMobile) return;
+                        setDraggingCatalogKey(sourceKey);
+                      }}
+                      onDragEnd={() => setDraggingCatalogKey(null)}
+                      onDragOver={(event) => {
+                        if (isMobile) return;
+                        event.preventDefault();
+                        if (draggingCatalogKey) moveCatalogByKey(draggingCatalogKey, sourceKey);
+                      }}
+                      onDrop={(event) => {
+                        if (isMobile) return;
+                        event.preventDefault();
+                        setDraggingCatalogKey(null);
+                      }}
                     >
-                      <div>
-                        <strong>{src.catalogId}</strong>
-                        <span>{formatCatalogType(src.type)}</span>
+                      <div className="catalog-list__item-main">
+                        <div className="catalog-list__drag-handle" aria-hidden="true">
+                          <GripVertical size={16} />
+                        </div>
+                        <div>
+                        <strong>{displayName}</strong>
+                        <span>
+                          {formatCatalogType(src.type)}
+                          {displayName !== src.catalogId ? ` • ${src.catalogId}` : ""}
+                          {src._missingFromManifest ? " • missing from manifest" : ""}
+                        </span>
+                      </div>
                       </div>
                       <button
                         className="icon-button icon-button--danger"
@@ -396,8 +545,30 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
                       >
                         <X size={13} />
                       </button>
+                      {isMobile && (
+                        <div className="mobile-reorder-controls" aria-label={`Reorder ${displayName}`}>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => moveCatalogByIndex(index, index - 1)}
+                            aria-label={`Move ${displayName} up`}
+                            disabled={index === 0}
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => moveCatalogByIndex(index, index + 1)}
+                            aria-label={`Move ${displayName} down`}
+                            disabled={index === draft.catalogSources.length - 1}
+                          >
+                            <ArrowDown size={14} />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  ))
+                  )})
                 ) : (
                   <div className="catalog-list__empty">No catalogs linked yet.</div>
                 )}
@@ -424,20 +595,14 @@ function FolderMiniEditor({ folder, manifest, onSave, onCancel }: FolderMiniEdit
           )}
         </div>
         <div className="modal-card__footer-actions">
-          {currentTabIndex < miniTabs.length - 1 ? (
-            <button
-              id={currentTabIndex === 0 ? "tut-folder-continue-1" : currentTabIndex === 1 ? "tut-folder-continue-2" : undefined}
-              className="button button--primary"
-              type="button"
-              onClick={() => setTab(miniTabs[currentTabIndex + 1].id)}
-            >
-              Continue
-            </button>
-          ) : (
-            <button id="tut-save-folder" className="button button--primary" type="button" onClick={() => onSave(draft)}>
-              Save folder
-            </button>
-          )}
+          <button
+            id={currentTabIndex === miniTabs.length - 1 ? "tut-save-folder" : undefined}
+            className="button button--primary"
+            type="button"
+            onClick={() => onSave(draft)}
+          >
+            Save folder
+          </button>
         </div>
       </div>
     </div>
@@ -450,19 +615,66 @@ interface FolderRowProps {
   folder: Folder;
   isExpanded: boolean;
   manifest: ParsedManifest | null;
+  isMobile: boolean;
   onToggle: () => void;
   onSave: (f: Folder) => void;
   onDelete: () => void;
+  draggable: boolean;
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
 
-function FolderRow({ folder, isExpanded, manifest, onToggle, onSave, onDelete }: FolderRowProps) {
+function FolderRow({
+  folder,
+  isExpanded,
+  manifest,
+  isMobile,
+  onToggle,
+  onSave,
+  onDelete,
+  draggable,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+}: FolderRowProps) {
   const pa = shapeAspectRatios[folder.tileShape];
 
   return (
-    <div className={`folder-row ${isExpanded ? "is-expanded" : ""}`}>
+    <div
+      className={`folder-row ${isExpanded ? "is-expanded" : ""} ${isDragging ? "is-dragging" : ""}`}
+      draggable={draggable && !isMobile}
+      onDragStart={() => {
+        if (isMobile) return;
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={(event) => {
+        if (isMobile) return;
+        event.preventDefault();
+        onDragOver();
+      }}
+      onDrop={(event) => {
+        if (isMobile) return;
+        event.preventDefault();
+      }}
+    >
       <div className="folder-row__summary" onClick={onToggle} role="button" tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && onToggle()}>
         {/* mini poster thumb */}
+        <div className="folder-row__drag-handle" aria-hidden="true">
+          <GripVertical size={16} />
+        </div>
         <div className="folder-row__thumb" style={{ width: 36, aspectRatio: pa }}>
           {folder._coverMode === "image" && folder.coverImageUrl ? (
             <img src={folder.coverImageUrl} alt={folder.title} />
@@ -482,6 +694,28 @@ function FolderRow({ folder, isExpanded, manifest, onToggle, onSave, onDelete }:
         </div>
 
         <div className="folder-row__actions" onClick={(e) => e.stopPropagation()}>
+          {isMobile && (
+            <div className="mobile-reorder-controls" aria-label={`Reorder ${folder.title || "folder"}`}>
+              <button
+                className="icon-button"
+                type="button"
+                onClick={onMoveUp}
+                aria-label={`Move ${folder.title} up`}
+                disabled={!canMoveUp}
+              >
+                <ArrowUp size={14} />
+              </button>
+              <button
+                className="icon-button"
+                type="button"
+                onClick={onMoveDown}
+                aria-label={`Move ${folder.title} down`}
+                disabled={!canMoveDown}
+              >
+                <ArrowDown size={14} />
+              </button>
+            </div>
+          )}
           <button
             className="icon-button"
             type="button"
@@ -506,6 +740,7 @@ function FolderRow({ folder, isExpanded, manifest, onToggle, onSave, onDelete }:
         <FolderMiniEditor
           folder={folder}
           manifest={manifest}
+          isMobile={isMobile}
           onSave={onSave}
           onCancel={onToggle}
         />
@@ -528,9 +763,22 @@ export function CollectionEditorModal({
   onClose,
   onSave,
 }: CollectionEditorModalProps) {
+  const [isMobile, setIsMobile] = useState(false);
   const [draft, setDraft] = useState<TopLevelCollection>(collection);
   const [step, setStep] = useState<CollectionStep>("basics");
   const [expandedFolderId, setExpandedFolderId] = useState<string | null>(null);
+  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 720px)");
+    const applyMatch = (event: MediaQueryList | MediaQueryListEvent) => {
+      setIsMobile(event.matches);
+    };
+
+    applyMatch(mediaQuery);
+    mediaQuery.addEventListener("change", applyMatch);
+    return () => mediaQuery.removeEventListener("change", applyMatch);
+  }, []);
 
   const updateCollection = <K extends keyof TopLevelCollection>(field: K, value: TopLevelCollection[K]) =>
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -559,6 +807,27 @@ export function CollectionEditorModal({
   const deleteFolder = (id: string) => {
     setDraft((prev) => ({ ...prev, folders: prev.folders.filter((f) => f.id !== id) }));
     if (expandedFolderId === id) setExpandedFolderId(null);
+  };
+
+  const moveFolderById = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+
+    setDraft((prev) => {
+      const fromIndex = prev.folders.findIndex((folder) => folder.id === fromId);
+      const toIndex = prev.folders.findIndex((folder) => folder.id === toId);
+
+      return {
+        ...prev,
+        folders: moveItem(prev.folders, fromIndex, toIndex),
+      };
+    });
+  };
+
+  const moveFolderByIndex = (fromIndex: number, toIndex: number) => {
+    setDraft((prev) => ({
+      ...prev,
+      folders: moveItem(prev.folders, fromIndex, toIndex),
+    }));
   };
 
   const stepIndex = TOP_STEPS.findIndex((s) => s.id === step);
@@ -603,17 +872,29 @@ export function CollectionEditorModal({
                 </div>
               ) : (
                 <div className="folder-list-stack">
-                  {draft.folders.map((folder) => (
+                  {draft.folders.map((folder, index) => (
                     <FolderRow
                       key={folder.id}
                       folder={folder}
                       isExpanded={expandedFolderId === folder.id}
                       manifest={manifest}
+                      isMobile={isMobile}
+                      draggable={expandedFolderId === null}
+                      isDragging={draggingFolderId === folder.id}
                       onToggle={() =>
                         setExpandedFolderId((id) => (id === folder.id ? null : folder.id))
                       }
                       onSave={(updated) => saveFolder(folder.id, updated)}
                       onDelete={() => deleteFolder(folder.id)}
+                      onDragStart={() => setDraggingFolderId(folder.id)}
+                      onDragEnd={() => setDraggingFolderId(null)}
+                      onDragOver={() => {
+                        if (draggingFolderId) moveFolderById(draggingFolderId, folder.id);
+                      }}
+                      canMoveUp={index > 0}
+                      canMoveDown={index < draft.folders.length - 1}
+                      onMoveUp={() => moveFolderByIndex(index, index - 1)}
+                      onMoveDown={() => moveFolderByIndex(index, index + 1)}
                     />
                   ))}
                 </div>
@@ -719,21 +1000,15 @@ export function CollectionEditorModal({
               )}
             </div>
             <div className="modal-card__footer-actions">
-              {stepIndex < TOP_STEPS.length - 1 ? (
-                <button
-                  id={step === "basics" ? "tut-collection-continue-1" : step === "folders" ? "tut-collection-continue-2" : undefined}
-                  className="button button--primary"
-                  type="button"
-                  onClick={() => setStep(TOP_STEPS[stepIndex + 1].id)}
-                  disabled={step === "folders" && draft.folders.length === 0}
-                >
-                  Continue
-                </button>
-              ) : (
-                <button id="tut-save-collection" className="button button--primary" type="button" onClick={() => onSave(draft)}>
-                  Save collection
-                </button>
-              )}
+              <button
+                id={stepIndex === TOP_STEPS.length - 1 ? "tut-save-collection" : undefined}
+                className="button button--primary"
+                type="button"
+                onClick={() => onSave(draft)}
+                disabled={step === "folders" && draft.folders.length === 0}
+              >
+                Save collection
+              </button>
             </div>
           </footer>
         )}
